@@ -2,6 +2,7 @@ import pandas as pd
 from dotenv import load_dotenv
 load_dotenv
 import os
+import etherscan
 
 
 #be sure a .env file is saved with a parameter "API_KEY" with the appropriate key for your account with Etherscan.io
@@ -25,13 +26,17 @@ chedda_marketing = "0x9625088c654d26b9132feb52d37107ab898d19c6"
 #The ETH null address - 1% of all transactions are sent here to be burned
 null_address = "0x0000000000000000000000000000000000000000"
 
+# instantiate the classes
+Accounts = etherscan.Accounts()
+Stats = etherscan.Stats()
+
 #define some simple on-chain metrics:
 #initially 100B tokens were created, then 50B were immediately burned
 initial_supply = 100000000000
 #current total supply comes from etherscan.io - includes everything except tokens sent to the null address
-total_supply = int(eth.get_total_supply_by_contract_address(chedda_contract)) * 10**-18
+total_supply = Stats.erc20_token_supply(chedda_contract)
 #the number of tokens burned by the devs
-dev_burned_chedda = int(eth.get_acc_balance_by_token_and_contract_address(chedda_contract, chedda_dead)) * 10**-18
+dev_burned_chedda = Accounts.erc20_token_balance(chedda_contract, chedda_dead)
 #the number of tokens burned by transactions
 trans_burned_chedda = initial_supply - total_supply # for now until Etherscan fixes the balance issue on the null address
 #circulating supply are the total number of token on the market and in CHEDDA wallets
