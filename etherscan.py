@@ -443,37 +443,58 @@ class Transactions:
         return res['result']
 
     # function to pull transaction history into a dataframe for a given token
-    def erc20_txn_history(self, contract_address):
+    def erc20_txn_history(self, contract_address, file_path):
         '''
         req'd:
         -contract_address: the address of the token contract you'd like to pull history, type=str
         '''
 
         # instantiate the Accounts class
-        Accounts = Accounts()
+        # Accounts = Accounts()
 
-        # we will use the erc20_transfer function from the Accounts class to build our .csv file
+        # we will use the erc20_transfer function from the Accounts class to build our dataframe
         # it is limited to 10,000 transactions per call so we will need to loop until we have pulled in all data
             ##for now the file location is going to be on this level and the file will be called chedda_history.csv
             ##in the future this will be deprecated and the user will need to choose the file location and the name
-        # first check if the file chedda_history.csv exists
+        # check first if there is a csv file in 'filepath', otherwise we will make one
         try:
-            history = pd.read_csv('./chedda_history')
+            history = pd.read_csv(file_path)
         except Exception as e:
             if "No such file or directory" in str(e):
-                pd.DataFrame(Accounts.erc20_transfer(contract_address)).to_csv('./chedda_history.csv')
-                history = pd.read_csv('./chedda_history')
-                history_total = history.copy()
+                history = pd.DataFrame(Accounts().erc20_transfer(contract_address))
+                history.sort_values(by=['timeStamp'], axis=0, inplace=True, ignore_index=True)
 
         # find the last block of transactions
         last_block = history.iloc[-1]['blockNumber']
 
+        # since we will use the last block to start pulling data, we must remove it from 'history' so we don't have any duplicates
+        history = history[history['blockNumber'] != last_block]
+
         # since the maximum number of items returned from Etherscan is 10,000, run the loop until the length
         # of the returned items is less than 10,000
-        while len(history) == 10000:
-            history = pd.DataFrame(Accounts.erc20_transfer(contract_address, startblock=last_block)) 
+        history_total = history.copy()
+
+        count = 0
+        length = 10000
+        while length == 10000:
+            count += 1
+            history = pd.DataFrame(Accounts().erc20_transfer(contract_address, startblock=last_block))
+            length = len(history)
+            history.sort_values(by=['timeStamp'], axis=0, inplace=True, ignore_index=True)
             last_block = history.iloc[-1]['blockNumber']
-            history_total = pd.concat([history, history_total], axis=0)
+            history2 = history[history['blockNumber']!=last_block]
+            if len(history) == 10000:
+                history_total = pd.concat([history2, history_total], axis=0)
+            else:
+                history_total = pd.concat([history, history_total], axis=0)
+
+        # be sure it is sorted in order by timeStamp
+        history_total.sort_values(by=['blockNumber', 'timeStamp'], axis=0, ascending=[True, True], inplace=True, ignore_index=True)
+
+        # write history_total to a csv
+        history_total.to_csv(file_path)
+
+        return history_total
 
     # function to pull in associated wallets (sent or received tokens from these addresses)
     def associate_wallets(self, wallet, file_path):
