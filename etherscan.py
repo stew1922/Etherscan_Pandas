@@ -442,6 +442,88 @@ class Transactions:
         # return the info
         return res['result']
 
+    # function to pull transaction history into a dataframe for a given token
+    def erc20_txn_history(self, contract_address):
+        '''
+        req'd:
+        -contract_address: the address of the token contract you'd like to pull history, type=str
+        '''
+
+        # instantiate the Accounts class
+        Accounts = Accounts()
+
+        # we will use the erc20_transfer function from the Accounts class to build our .csv file
+        # it is limited to 10,000 transactions per call so we will need to loop until we have pulled in all data
+            ##for now the file location is going to be on this level and the file will be called chedda_history.csv
+            ##in the future this will be deprecated and the user will need to choose the file location and the name
+        # first check if the file chedda_history.csv exists
+        try:
+            history = pd.read_csv('./chedda_history')
+        except Exception as e:
+            if "No such file or directory" in str(e):
+                pd.DataFrame(Accounts.erc20_transfer(contract_address)).to_csv('./chedda_history.csv')
+                history = pd.read_csv('./chedda_history')
+                history_total = history.copy()
+
+        # find the last block of transactions
+        last_block = history.iloc[-1]['blockNumber']
+
+        # since the maximum number of items returned from Etherscan is 10,000, run the loop until the length
+        # of the returned items is less than 10,000
+        while len(history) == 10000:
+            history = pd.DataFrame(Accounts.erc20_transfer(contract_address, startblock=last_block)) 
+            last_block = history.iloc[-1]['blockNumber']
+            history_total = pd.concat([history, history_total], axis=0)
+
+    # function to pull in associated wallets (sent or received tokens from these addresses)
+    def associate_wallets(self, wallet, file_path):
+        '''
+        req'd:
+        -wallet: the wallet address you want to analyze, type=str
+        -file_path: the file location of the .csv file with the token's txn history
+            NOTICE: Use 'erc20_txn_history' above and 'pd.to_csv()' to easily create a .csv if you don't have one already
+        '''
+    
+        # the .csv that gets created from the above function is always in lower case
+        wallet = str(wallet).lower()
+
+        # read the csv
+        history = pd.read_csv(file_path)
+
+        # filter down the 'to' and 'from' columns to the desired wallet address
+        fil = history[(history['to'] == wallet) | (history['from'] == wallet)]
+
+        # create a list 'send' and 'receive' wallets with the amounts sent and received
+        sent = list(set(fil['to'].values))
+        receive = list(set(fil['from'].values))
+
+        associations = {}
+        sent_dict = {}
+        received_dict = {}
+
+        for assoc in sent:
+            sent_dict[assoc] = fil[fil['to'] == assoc]['value'].astype('float').sum()*10**-18
+        
+        del sent_dict[wallet]
+
+        for assoc in receive:
+            received_dict[assoc] = fil[fil['from'] == assoc]['value'].astype('float').sum()*10**-18
+
+        del received_dict[wallet]
+
+        outs = sum(sent_dict.values())
+        ins = sum(received_dict.values())
+        balance = ins - outs
+        
+        associations = {
+            'sent': sent_dict,
+            'received': received_dict, 
+            'balance': balance
+        }
+
+
+        return associations
+
 class Stats:
 
     # instantiate the class with the module identifier and what network to connect to (by defalut set to "main", aka mainnet)
@@ -529,4 +611,3 @@ class Stats:
 
         # return the info in ETH, NOT wei (1 wei = 1 * 10^-18)
         return res['result']
-

@@ -6,8 +6,8 @@ import etherscan
 chedda_dead = "0x000000000000000000000000000000000000dead"
 # The CHEDDA deployer wallet
 chedda_deployer = "0x763cfa5b0eb7bb2e54100010c5a8fc44d1dde714"
-# The dev wallet (staking rewards are coming from here)
-dev_wallet = "0x8d29e90625213f4eedbdc49e6358fdbf76b9ddd0"
+# The staking contract
+staking = "0x8d29e90625213f4eedbdc49e6358fdbf76b9ddd0"
 # The contract address for CHEDDA
 chedda_contract = "0x16756EC1DEb89A2106C35E0B586a799D0A61837D"
 # The marketing wallet where 2% of all transactions go to cover marketing expenses
@@ -30,18 +30,6 @@ dev_burned_chedda = Accounts.erc20_token_balance(chedda_contract, chedda_dead)
 txn_burned_chedda = initial_supply - total_supply # for now until Etherscan fixes the balance issue on the null address
 #circulating supply are the total number of token on the market and in CHEDDA wallets
 circulating_supply = initial_supply - dev_burned_chedda - txn_burned_chedda
-
-#create a function to automatically update CHEDDA_history.csv
-def update_chedda_history(file="./CHEDDA_history.csv", rate_limit=5):
-    
-    # pull in the current history csv and create a pandas dataframe
-    history = pd.read_csv("./CHEDDA_history.csv")
-
-    # define the last time that is included in the csv
-    last_time = history.iloc[-1].UnixTimestamp
-
-    # utilizing Etherscan SDK, pull in new data starting from one nanasecond after the last time
-    # loop through all data until it is current
 
 
 
