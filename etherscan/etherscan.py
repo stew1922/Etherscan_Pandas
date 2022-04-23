@@ -1,5 +1,6 @@
 # this file willl utilize API endpoints from the Ethereum block explorer Etherscan.io
 import pandas as pd
+import numpy as np
 from dotenv import load_dotenv
 load_dotenv
 import os
@@ -69,7 +70,7 @@ class Accounts:
                 balances[balance['account']] = int(balance['balance'])*10**-18
             return balances
 
-    # function to get a list of 'normal' or 'internal' txns by address
+    # function to a list of 'normal' or 'internal' txns by address
     def get_txns_by_address(self, address, kind, startblock=0, endblock=None, page=None, offset=None, sort='asc'):
         '''
         **NOTICE: This endpoint only returns a maximum of 10,000 records at one time.
@@ -225,7 +226,7 @@ class Accounts:
             return int(res['result']) * 10**-18
 
     # function to get a list of ERC20 token transfer events
-    def erc20_transfer(self, contract_address, wallet_address=None, page=None, offset=None, startblock=0, endblock=None, sort='asc'):
+    def erc20_transfer_history(self, contract_address, wallet_address=None, page=None, offset=None, startblock=0, endblock=None, sort='asc'):
         '''
         req'd:
         -contract_address: the address of the contract for which you wish to pull data, type=str
@@ -266,12 +267,12 @@ class Accounts:
 
         # return the info, first checking for a no transactions warning
         if res['message'] == 'No transactions found':
-            print(f'WARNING: {res["message"]}')
+            raise Exception(f'WARNING: {res["message"]}')
 
         return res['result']
 
     # function to get a list of ERC721 token transfer events
-    def erc721_transfer(self, contract_address, wallet_address=None, page=None, offset=None, startblock=0, endblock=None, sort='asc'):
+    def erc721_transfer_history(self, contract_address, wallet_address=None, page=None, offset=None, startblock=0, endblock=None, sort='asc'):
         '''
         req'd:
         -contract_address: the address of the contract for which you wish to pull data, type=str
@@ -331,6 +332,25 @@ class Accounts:
         '''
 
         action = 'balancehistory'
+    
+    # function to return a pandas dataframe of an account and it's balance
+    def erc20_transfer_history_df(self, contract_address, wallet_address=None, page=None, offset=None, startblock=0, endblock=None, sort='asc'):
+
+        # pull the history from the erc20_transfer_history() function
+        history = self.erc20_transfer_history(contract_address, wallet_address, page, offset, startblock, endblock, sort)
+
+        # create the dataframe
+        history_df = pd.DataFrame(history)
+
+        # set the 'value' column to "float"
+        history_df['value'] = history_df['value'].astype('float')
+
+        # create a 'balance' column
+        history_df['txn_value'] = np.where(history_df['to'] == str(wallet_address).lower(), history_df['value'], history_df['value'] * -1)
+        history_df['balance'] = history_df['txn_value'].cumsum()
+
+        return history_df
+
 
 class Contracts:
 
@@ -386,6 +406,7 @@ class Contracts:
 
         # return the info
         return res['result']
+
 
 class Transactions:
 
@@ -461,7 +482,7 @@ class Transactions:
             history = pd.read_csv(file_path)
         except Exception as e:
             if "No such file or directory" in str(e):
-                history = pd.DataFrame(Accounts().erc20_transfer(contract_address))
+                history = pd.DataFrame(Accounts().erc20_transfer_history(contract_address))
                 history.sort_values(by=['timeStamp'], axis=0, inplace=True, ignore_index=True)
 
         # find the last block of transactions
@@ -478,7 +499,7 @@ class Transactions:
         length = 10000
         while length == 10000:
             count += 1
-            history = pd.DataFrame(Accounts().erc20_transfer(contract_address, startblock=last_block))
+            history = pd.DataFrame(Accounts().erc20_transfer_history(contract_address, startblock=last_block))
             length = len(history)
             history.sort_values(by=['timeStamp'], axis=0, inplace=True, ignore_index=True)
             last_block = history.iloc[-1]['blockNumber']
@@ -539,11 +560,12 @@ class Transactions:
         associations = {
             'sent': sent_dict,
             'received': received_dict, 
-            'balance': balance
+            'current_balance': balance
         }
 
 
         return associations
+
 
 class Stats:
 

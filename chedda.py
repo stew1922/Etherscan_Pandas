@@ -6,8 +6,8 @@ import etherscan
 chedda_dead = "0x000000000000000000000000000000000000dead"
 # The CHEDDA deployer wallet
 chedda_deployer = "0x763cfa5b0eb7bb2e54100010c5a8fc44d1dde714"
-# The staking contract
-staking = "0x8d29e90625213f4eedbdc49e6358fdbf76b9ddd0"
+# The staking
+dev_wallet = "0x8d29e90625213f4eedbdc49e6358fdbf76b9ddd0"
 # The contract address for CHEDDA
 chedda_contract = "0x16756EC1DEb89A2106C35E0B586a799D0A61837D"
 # The marketing wallet where 2% of all transactions go to cover marketing expenses
