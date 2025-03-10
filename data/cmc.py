@@ -14,6 +14,7 @@ class Cryptocurrency:
         self.cmc_id = cmc_id
 
         self.cmc = coinmarketcapapi.CoinMarketCapAPI(api_key)
+
     
     def current_USD_price(self, cmc_id=None, symbol=None):
         cmc_id, symbol = self.cmc_id, self.symbol
@@ -23,11 +24,17 @@ class Cryptocurrency:
         elif cmc_id!=None:
             r = self.cmc.cryptocurrency_quotes_latest(id=self.cmc_id)
             price = r.data[str(self.cmc_id)]['quote']['USD']['price']
-            return price
+            if price is None:
+                return 0
+            else:
+                return price
         else:
             r = self.cmc.cryptocurrency_quotes_latest(symbol=self.symbol)
             price = r.data[self.symbol]['quote']['USD']['price']
-            return price
+            if price is None:
+                return 0
+            else:
+                return price
 
     def last_24h_price_change(self, cmc_id=None, symbol=None):
         cmc_id, symbol = self.cmc_id, self.symbol

@@ -57,7 +57,10 @@ known_addresses = {
     'coinbase_commerce': '0xf6874c88757721a02f47592140905c4336dfbc61',
     'coinbase_commerce_contract': '0x881d4032abe4188e2237efcd27ab435e81fc6bb1',
     'coinbase_misc': '0xa090e606e30bd747d4e6245a1517ebe430f0057e',
-    'binance': '0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE'
+    'binance': '0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE',
+    'airswap': '0x74de5d4fcbf63e00296fd95d33236b9794016631',
+    'gemini': '0xd24400ae8BfEBb18cA49Be86258a3C749cf46853',
+    'bittrex': '0xFBb1b73C4f0BDa4f67dcA266ce6Ef42f520fBB98'
 }
 
 # create a known addresses dictionary where the values become the keys so you can look up a label for a wallet
@@ -385,6 +388,9 @@ class Accounts:
         # pull the history from the erc20_transfer_history() function
         history = self.get_txns_by_address(address, kind, startblock=0, endblock=None, page=None, offset=None, sort='asc')
 
+        if len(history) == 0:
+            return pd.DataFrame()
+
         # create the dataframe
         history_df = pd.DataFrame(history)
 
@@ -650,37 +656,47 @@ class Transactions:
 
        # pull in the "normal" ETH txns and format the necessary columns
         wallet_normal = Accounts().get_txns_by_address_df(wallet, 'normal')
-        wallet_normal.timeStamp = pd.to_datetime(wallet_normal.timeStamp, utc=True, unit='s')
-        wallet_normal.value = wallet_normal.value.astype('float') * 10**-18
-        wallet_normal.txn_value = wallet_normal.txn_value.astype('float') * 10**-18
-        wallet_normal.balance = wallet_normal.balance.astype('float') * 10**-18
-        wallet_normal.nonce = wallet_normal.nonce.astype('float')
-        wallet_normal['to_label'] = ""
-        wallet_normal['from_label'] = ""
-        for i in (wallet_normal.index):
-            if wallet_normal.loc[i, 'to'] in invert_known_addresses:
-                wallet_normal.loc[i, 'to_label'] = invert_known_addresses[wallet_normal['to'].loc[i]]
+        if len(wallet_normal) != 0:
+            wallet_normal.timeStamp = pd.to_datetime(wallet_normal.timeStamp, utc=True, unit='s')
+            wallet_normal.value = wallet_normal.value.astype('float') * 10**-18
+            wallet_normal.txn_value = wallet_normal.txn_value.astype('float') * 10**-18
+            wallet_normal.balance = wallet_normal.balance.astype('float') * 10**-18
+            wallet_normal.nonce = wallet_normal.nonce.astype('float')
+            wallet_normal['to_label'] = ""
+            wallet_normal['from_label'] = ""
+            for i in (wallet_normal.index):
+                if wallet_normal.loc[i, 'to'] in invert_known_addresses:
+                    wallet_normal.loc[i, 'to_label'] = invert_known_addresses[wallet_normal['to'].loc[i]]
 
-            if wallet_normal.loc[i, 'from'] in invert_known_addresses:
-                wallet_normal.loc[i, 'from_label'] = invert_known_addresses[wallet_normal['from'].loc[i]] 
+                if wallet_normal.loc[i, 'from'] in invert_known_addresses:
+                    wallet_normal.loc[i, 'from_label'] = invert_known_addresses[wallet_normal['from'].loc[i]] 
 
        # pull in the "internal" ETH txns and format the necessary columns.
         wallet_internal = Accounts().get_txns_by_address_df(wallet, 'internal')
-        wallet_internal.timeStamp = pd.to_datetime(wallet_internal.timeStamp, unit='s', utc=True)
-        wallet_internal.value = wallet_internal.value.astype('float') * 10**-18
-        wallet_internal.txn_value = wallet_internal.txn_value.astype('float') * 10**-18
-        wallet_internal.balance = wallet_internal.balance.astype('float') * 10**-18
-        wallet_internal['to_label'] = ""
-        wallet_internal['from_label'] = ""
-        for i in (wallet_internal.index):
-            if wallet_internal.loc[i, 'to'] in invert_known_addresses:
-                wallet_internal.loc[i, 'to_label'] = invert_known_addresses[wallet_internal['to'].loc[i]]
+        if len(wallet_internal) != 0:
+            wallet_internal.timeStamp = pd.to_datetime(wallet_internal.timeStamp, unit='s', utc=True)
+            wallet_internal.value = wallet_internal.value.astype('float') * 10**-18
+            wallet_internal.txn_value = wallet_internal.txn_value.astype('float') * 10**-18
+            wallet_internal.balance = wallet_internal.balance.astype('float') * 10**-18
+            wallet_internal['to_label'] = ""
+            wallet_internal['from_label'] = ""
+            for i in (wallet_internal.index):
+                if wallet_internal.loc[i, 'to'] in invert_known_addresses:
+                    wallet_internal.loc[i, 'to_label'] = invert_known_addresses[wallet_internal['to'].loc[i]]
 
-            if wallet_internal.loc[i, 'from'] in invert_known_addresses:
-                wallet_internal.loc[i,'from_label'] = invert_known_addresses[wallet_internal['from'].loc[i]] 
+                if wallet_internal.loc[i, 'from'] in invert_known_addresses:
+                    wallet_internal.loc[i,'from_label'] = invert_known_addresses[wallet_internal['from'].loc[i]] 
 
         # merge the internal, normal and erc20 dataframes
-        merged = pd.merge(wallet_internal, wallet_normal, how='outer')
+        if len(wallet_normal) == 0 and len(wallet_internal) == 0:
+            merged = pd.DataFrame()
+        elif len(wallet_normal) > 0 and len(wallet_internal) == 0:
+            merged = wallet_normal.copy()
+        elif len(wallet_normal) == 0 and len(wallet_internal) > 0:
+            merged = wallet_internal.copy()
+        else:
+            merged = pd.merge(wallet_internal, wallet_normal, how='outer')
+
         merged = pd.merge(wallet_erc20_history, merged, how='outer')
         merged.drop(columns=['balance', 'txn_value', 'Unnamed: 0'], inplace=True)
 

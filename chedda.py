@@ -51,7 +51,10 @@ known_addresses = {
     'coinbase_commerce': '0xf6874c88757721a02f47592140905c4336dfbc61',
     'coinbase_commerce_contract': '0x881d4032abe4188e2237efcd27ab435e81fc6bb1',
     'coinbase_misc': '0xa090e606e30bd747d4e6245a1517ebe430f0057e',
-    'binance': '0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE'
+    'binance': '0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE', 
+    'Fodor': '0x472e32174A8612e5545E93912F9C255FAD20f7b7',
+    'Hawkins': '0xb5d85cbf7cb3ee0d56b3bb207d5fc4b82f43f511',
+    'Hawkins2': '0x16889571f609D30f8E67296e384CB578Df44277c'
 }
 
 # create a known addresses dictionary where the values become the keys so you can look up a label for a wallet
@@ -67,7 +70,7 @@ history = update_history()
 
 # define some simple on-chain metrics:
 # initially 100B tokens were created, then 50B were immediately burned
-initial_supply = 100000000000
+initial_supply = float(100000000000)
 # current total supply comes from etherscan.io - includes everything except tokens sent to the null address
 total_supply = float(stats.erc20_token_supply(known_addresses['chedda_contract']))
 # the number of tokens burned by the devs
@@ -81,7 +84,7 @@ last_24h_trading_volume = cmc.Cryptocurrency(cmc_id=cmc_id).last_24h_volume()
 # last 24 hours volume % change
 last_24h_volume_change = cmc.Cryptocurrency(cmc_id=cmc_id).last_24h_volume_change()
 # current price of CHEDDA ($/CHEDDA)
-current_price_USD = cmc.Cryptocurrency(cmc_id=cmc_id).current_USD_price()
+current_price_USD = float(cmc.Cryptocurrency(cmc_id=cmc_id).current_USD_price())
 # last 24 hours price change %
 last_24h_price_change = cmc.Cryptocurrency(cmc_id=cmc_id).last_24h_price_change()
 # current marketcap of CHEDDA
